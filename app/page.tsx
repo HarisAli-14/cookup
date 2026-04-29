@@ -38,6 +38,8 @@ export default function Home() {
         throw new Error(data.error || "Order could not be submitted.");
       }
 
+      window.sessionStorage.setItem(`cookup-order-${data.proposal_id}`, JSON.stringify(data));
+
       const params = new URLSearchParams({
         proposalId: String(data.proposal_id),
         orderId: data.order_id || ""

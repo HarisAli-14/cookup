@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 type StatusResponse = {
   ok: boolean;
   status?: string;
+  order_id?: string;
   proposal_id?: string | number;
   proposal_summary?: string;
   delivery_time?: string;
@@ -45,6 +46,15 @@ function OrderReceivedContent() {
       return;
     }
 
+    const storedOrder = window.sessionStorage.getItem(`cookup-order-${proposalId}`);
+    if (storedOrder) {
+      try {
+        setStatus(JSON.parse(storedOrder) as StatusResponse);
+      } catch {
+        window.sessionStorage.removeItem(`cookup-order-${proposalId}`);
+      }
+    }
+
     let cancelled = false;
 
     async function loadStatus() {
@@ -57,7 +67,7 @@ function OrderReceivedContent() {
           throw new Error(data.error || "Status is not available yet.");
         }
         if (!cancelled) {
-          setStatus(data);
+          setStatus((current) => ({ ...current, ...data }));
           setError("");
         }
       } catch (err) {
@@ -78,6 +88,8 @@ function OrderReceivedContent() {
 
   const approved = status?.status === "chef_approved";
   const rejected = status?.status === "rejected";
+  const waitingForChef = !approved && !rejected;
+  const displayOrderId = status?.order_id || orderId || proposalId;
 
   return (
     <main className="shell">
@@ -86,25 +98,33 @@ function OrderReceivedContent() {
           <span className="brand-mark">C</span>
           CookUp
         </Link>
-        <span className="pill">Order {orderId || proposalId}</span>
+        <span className="pill">Order {displayOrderId}</span>
       </nav>
 
       <section className="card center-card">
         <p className="kicker">Order received</p>
-        <h2>{approved ? "Your chef approved the proposal." : rejected ? "The chef rejected this proposal." : "Chef review is in progress."}</h2>
+        <h2>{approved ? "Your chef approved the proposal." : rejected ? "The chef rejected this proposal." : "Your order details are ready."}</h2>
         <p className="muted">
           {approved
             ? "Review the meal proposal and confirm if you want CookUp to create the final order."
             : rejected
               ? "This proposal cannot be fulfilled. Please submit a new request with different requirements."
-              : "Keep this page open. It checks your n8n workflow every few seconds and updates when the chef responds."}
+              : "We received your request and created the proposal below. Keep this page open; it will update when the chef responds."}
         </p>
 
-        {!approved && !rejected ? <div className="spinner" aria-label="Loading" /> : null}
+        {waitingForChef ? <div className="spinner" aria-label="Waiting for chef review" /> : null}
         {error ? <div className="error">{error}</div> : null}
 
         {status ? (
           <div className="summary">
+            <div className="summary-row">
+              <strong>Order ID</strong>
+              <span>{displayOrderId}</span>
+            </div>
+            <div className="summary-row">
+              <strong>Proposal ID</strong>
+              <span>{status.proposal_id || proposalId}</span>
+            </div>
             <div className="summary-row">
               <strong>Status</strong>
               <span>{status.status || "pending"}</span>
