@@ -1,0 +1,1584 @@
+{
+  "name": "cookup - HTTP webhooks",
+  "nodes": [
+    {
+      "parameters": {
+        "tableId": "customers",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.customer_name }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.customer_phone }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.customer_email ?? \"\" }}"
+            }
+          ]
+        }
+      },
+      "id": "87767ff0-ed98-46e6-934a-8b5474c44bf1",
+      "name": "Insert/Update Customer",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        -24
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const timestamp = Date.now();\nconst orderId = `CK-${timestamp.toString().slice(-6)}`;\nreturn [{ order_id: orderId }];"
+      },
+      "id": "8a6eb39f-44ab-4fd7-a900-c4df52b6e770",
+      "name": "Generate Order ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -24
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "meal_requests",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "customer_id",
+              "fieldValue": "={{ $(\"Insert/Update Customer\").item.json.id }}"
+            },
+            {
+              "fieldId": "raw_message",
+              "fieldValue": "={{ $(\"Customer Order Form\").item.json.message }}"
+            },
+            {
+              "fieldId": "delivery_address",
+              "fieldValue": "={{ $(\"Customer Order Form\").item.json.delivery_address }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "new_request"
+            }
+          ]
+        }
+      },
+      "id": "0e010b4a-1e15-4f9a-9912-6f8d55ccfe78",
+      "name": "Insert Meal Request",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -24
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Parse this meal request into structured JSON. Return ONLY valid JSON, no explanation.\n\nCustomer message: {{ $(\"Customer Order Form\").item.json.message }}\n\nReturn this exact format:\n{\n  \"people\": <number>,\n  \"meal_type\": \"breakfast|lunch|dinner|snack\",\n  \"requested_time\": \"<time string>\",\n  \"delivery_needed\": true|false,\n  \"dietary_restrictions\": [\"restriction1\", \"restriction2\"],\n  \"special_notes\": \"<any notes>\"\n}",
+        "options": {
+          "systemMessage": "You are a JSON parser. Return only valid JSON, no markdown, no explanation."
+        }
+      },
+      "id": "626481fb-4196-48c1-82f0-84f4499af951",
+      "name": "Parse Customer Request",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        352,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "14d2bb90-3203-48c0-ba4c-944f962968bd",
+      "name": "OpenAI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        424,
+        96
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Bwu0Todri4cx06fz",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "meal_requests",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $(\"Insert Meal Request\").item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "people",
+              "fieldValue": "={{ JSON.parse($(\"Parse Customer Request\").item.json.output).people }}"
+            },
+            {
+              "fieldId": "meal_type",
+              "fieldValue": "={{ JSON.parse($(\"Parse Customer Request\").item.json.output).meal_type }}"
+            },
+            {
+              "fieldId": "requested_time",
+              "fieldValue": "={{ JSON.parse($(\"Parse Customer Request\").item.json.output).requested_time }}"
+            },
+            {
+              "fieldId": "delivery_needed",
+              "fieldValue": "={{ JSON.parse($(\"Parse Customer Request\").item.json.output).delivery_needed }}"
+            },
+            {
+              "fieldId": "dietary_restrictions",
+              "fieldValue": "={{ JSON.parse($(\"Parse Customer Request\").item.json.output).dietary_restrictions }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "parsed"
+            }
+          ]
+        }
+      },
+      "id": "41173fa9-84c2-48cd-a124-3fca4f5931b1",
+      "name": "Update Parsed Request",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        704,
+        -24
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "recipes",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "available",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "id": "fe44c669-a261-4be5-a047-5a53ab3501dc",
+      "name": "Fetch Available Recipes",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        928,
+        -24
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the CookUp AI meal planner. Create a meal proposal based on customer request and available recipes.\n\nCustomer request:\n{{ $(\"Parse Customer Request\").item.json.output }}\n\nAvailable recipes:\n{{ $(\"Fetch Available Recipes\").all().map(r => JSON.stringify(r.json)).join(\"\\n\") }}\n\nRules:\n1. STRICTLY filter out recipes with restricted ingredients\n2. If customer says \"no beef\", exclude ALL recipes with \"beef\" in tags\n3. If customer needs gluten-free, include at least one recipe with \"gluten-free\" tag\n4. Select combination for the number of people requested\n5. Assign chef based on recipes\n\nReturn ONLY valid JSON:\n{\n  \"proposal_summary\": \"3x Chicken Biryani Bowls and 1x Gluten-Free Lentil Bowl\",\n  \"items\": [\n    {\"recipe\": \"Chicken Biryani Bowl\", \"quantity\": 3},\n    {\"recipe\": \"Gluten-Free Lentil Bowl\", \"quantity\": 1}\n  ],\n  \"chef\": \"Chef Ayesha\",\n  \"delivery_time\": \"7:30 PM\",\n  \"reasoning\": \"Meets no-beef and gluten-free requirements.\"\n}",
+        "options": {
+          "systemMessage": "You are a meal planner. Return only valid JSON, no markdown, no explanation."
+        }
+      },
+      "id": "ab32ae30-73e7-4ab7-b487-c5a034ecc135",
+      "name": "Create Meal Proposal",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1152,
+        -24
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "meal_proposals",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "request_id",
+              "fieldValue": "={{ $(\"Insert Meal Request\").item.json.id }}"
+            },
+            {
+              "fieldId": "proposal_summary",
+              "fieldValue": "={{ JSON.parse($(\"Create Meal Proposal\").item.json.output).proposal_summary }}"
+            },
+            {
+              "fieldId": "proposal_items",
+              "fieldValue": "={{ JSON.parse($(\"Create Meal Proposal\").item.json.output).items }}"
+            },
+            {
+              "fieldId": "chef_name",
+              "fieldValue": "={{ JSON.parse($(\"Create Meal Proposal\").item.json.output).chef }}"
+            },
+            {
+              "fieldId": "delivery_time",
+              "fieldValue": "={{ JSON.parse($(\"Create Meal Proposal\").item.json.output).delivery_time }}"
+            },
+            {
+              "fieldId": "reasoning",
+              "fieldValue": "={{ JSON.parse($(\"Create Meal Proposal\").item.json.output).reasoning }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "proposal_created"
+            }
+          ]
+        }
+      },
+      "id": "17c446bf-64a5-40c7-bed2-37bca59ce7ee",
+      "name": "Insert Meal Proposal",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -24
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8247736078",
+        "text": "=🍽️ New CookUp Meal Proposal\n\n📋 Order ID: {{ $(\"Generate Order ID\").item.json.order_id }}\n👤 Customer: {{ $(\"Customer Order Form\").item.json.customer_name }}\n📝 Request: {{ $(\"Customer Order Form\").item.json.message }}\n\n✅ Proposed Order: {{ JSON.parse($(\"Create Meal Proposal\").item.json.output).proposal_summary }}\n⏰ Delivery Time: {{ JSON.parse($(\"Create Meal Proposal\").item.json.output).delivery_time }}\n\nCan you fulfill this? Reply: Accept, Reject, or Suggest Change",
+        "additionalFields": {}
+      },
+      "id": "9c5ccc12-4c34-4ad9-9271-d934b16ff19a",
+      "name": "Send Chef Approval Request",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        -24
+      ],
+      "webhookId": "6a0c4501-9b85-4b88-ab12-9632b64b6f0a",
+      "credentials": {
+        "telegramApi": {
+          "id": "KH5RlHJ27eIyD3mO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Process the chef reply and determine the decision.\n\nChef reply: {{ $(\"Extract Order ID from Reply\").item.json.chef_reply }}\n\nReturn ONLY valid JSON (no markdown, no code blocks):\n{\n  \"chef_decision\": \"ACCEPT|REJECT|CHANGE\",\n  \"proposal_approved\": true|false,\n  \"notes\": \"<any notes from chef>\"\n}",
+        "options": {
+          "systemMessage": "You are a decision parser. Return only valid JSON without markdown code blocks."
+        }
+      },
+      "id": "d8504a34-1447-41f2-a510-e9a7ac4435aa",
+      "name": "Process Chef Reply",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        0,
+        316
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "chef_approvals",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "proposal_id",
+              "fieldValue": "={{ $(\"Fetch Pending Proposal\").item.json.id }}"
+            },
+            {
+              "fieldId": "chef_name",
+              "fieldValue": "={{ $(\"Fetch Pending Proposal\").item.json.chef_name }}"
+            },
+            {
+              "fieldId": "response",
+              "fieldValue": "={{ $(\"Clean AI Response\").item.json.chef_decision }}"
+            },
+            {
+              "fieldId": "chef_notes",
+              "fieldValue": "={{ $(\"Clean AI Response\").item.json.notes }}"
+            }
+          ]
+        }
+      },
+      "id": "95df5157-4667-4baa-89f0-dbc2c0b49c73",
+      "name": "Save Chef Approval",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        704,
+        316
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "meal_proposals",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $(\"Fetch Pending Proposal\").item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "chef_approved"
+            }
+          ]
+        }
+      },
+      "id": "f5a8ce54-434e-4fe7-a1b4-2bb4190b5252",
+      "name": "Update Proposal Status",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        928,
+        316
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Clean AI Response\").item.json.chef_decision }}",
+              "rightValue": "REJECT",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d01b6e75-b7e1-4f04-9dd0-6adc87707ccc",
+      "name": "Check Chef Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1216,
+        316
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.decision }}",
+              "rightValue": "CONFIRM",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "0cb9020c-bc21-4471-9e4f-c77c0f73b419"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cebe4cc8-65ec-43e0-a692-21829f69156b",
+      "name": "Check Customer Confirmation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "orders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "order_number",
+              "fieldValue": "={{ $(\"Generate Order Number\").item.json.order_id }}"
+            },
+            {
+              "fieldId": "customer_id",
+              "fieldValue": "={{ $(\"Fetch Customer Details\").item.json.id }}"
+            },
+            {
+              "fieldId": "request_id",
+              "fieldValue": "={{ $(\"Fetch Request Details\").item.json.id }}"
+            },
+            {
+              "fieldId": "proposal_id",
+              "fieldValue": "={{ $(\"Fetch Order Context\").item.json.id }}"
+            },
+            {
+              "fieldId": "final_order",
+              "fieldValue": "={{ $(\"Fetch Order Context\").item.json }}"
+            },
+            {
+              "fieldId": "chef_name",
+              "fieldValue": "={{ $(\"Fetch Order Context\").item.json.chef_name }}"
+            },
+            {
+              "fieldId": "delivery_time",
+              "fieldValue": "={{ $(\"Fetch Order Context\").item.json.delivery_time }}"
+            },
+            {
+              "fieldId": "delivery_address",
+              "fieldValue": "={{ $(\"Fetch Request Details\").item.json.delivery_address }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "confirmed"
+            },
+            {
+              "fieldId": "payment_status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "id": "ca82af28-a283-4008-aa73-fea80eb0968d",
+      "name": "Create Official Order",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3296,
+        124
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1D1lD1APBqqYU3DMaWeQYJCsaQBknYp3sv4iHK_PQb1I/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1D1lD1APBqqYU3DMaWeQYJCsaQBknYp3sv4iHK_PQb1I/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "639c2bf0-21ed-4726-8df0-3440992a0123",
+      "name": "Append to Ops Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3520,
+        124
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aInfEbfLbUjz7MDC",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "shharis146@gmail.com",
+        "subject": "New CookUp Order Confirmed",
+        "message": "={{ \"<h2>New Order Confirmed</h2>\" +\n\"<p><strong>Order ID:</strong> \" + $(\"Generate Order Number\").item.json.order_id + \"</p>\" +\n\"<p><strong>Customer:</strong> \" + $(\"Fetch Customer Details\").item.json.name + \"</p>\" +\n\"<p><strong>Phone:</strong> \" + $(\"Fetch Customer Details\").item.json.phone + \"</p>\" +\n\"<p><strong>Order:</strong> \" + $(\"Fetch Order Context\").item.json.proposal_summary + \"</p>\" +\n\"<p><strong>Chef:</strong> \" + $(\"Fetch Order Context\").item.json.chef_name + \"</p>\" +\n\"<p><strong>Delivery Time:</strong> \" + $(\"Fetch Order Context\").item.json.delivery_time + \"</p>\" +\n\"<p><strong>Address:</strong> \" + $(\"Fetch Request Details\").item.json.delivery_address + \"</p>\" +\n\"<p><strong>Status:</strong> Confirmed</p>\" }}",
+        "options": {}
+      },
+      "id": "b69fb0df-3cab-4ec7-a498-22e79490a366",
+      "name": "Email Founder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3744,
+        124
+      ],
+      "webhookId": "5a81a68d-8f07-4c37-a32e-3f9a75721cba",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sw8mAeZSIg2H5k9v",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8247736078",
+        "text": "=✅ Customer Confirmed Order\n\nOrder ID: {{ $(\"Generate Order Number\").item.json.order_id }}\n\nOrder: {{ $(\"Fetch Order Context\").item.json.proposal_summary }}\n\nDelivery: {{ $(\"Fetch Order Context\").item.json.delivery_time }}\n\nPlease begin preparation.",
+        "additionalFields": {}
+      },
+      "id": "4729514b-5c0c-414d-ab9f-2eda26a947bb",
+      "name": "Notify Chef - Order Confirmed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3968,
+        124
+      ],
+      "webhookId": "8f0711c1-ef2d-4515-a964-4c6fc3d9e59e",
+      "credentials": {
+        "telegramApi": {
+          "id": "KH5RlHJ27eIyD3mO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "order_status_history",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "order_id",
+              "fieldValue": "={{ $(\"Create Official Order\").item.json.id }}"
+            },
+            {
+              "fieldId": "request_id",
+              "fieldValue": "={{ $(\"Fetch Request Details\").item.json.id }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "confirmed"
+            },
+            {
+              "fieldId": "notes",
+              "fieldValue": "Customer confirmed order"
+            }
+          ]
+        }
+      },
+      "id": "5b53e30e-5ca3-46f7-8a5e-e0329e58e16c",
+      "name": "Add Status History",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4192,
+        124
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": "8247736078"
+        }
+      },
+      "id": "ffdef922-8a4b-40b8-ac54-497a6055bc72",
+      "name": "Chef Reply Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -672,
+        316
+      ],
+      "webhookId": "af88889a-7a5f-423d-9e14-766d615b6982",
+      "credentials": {
+        "telegramApi": {
+          "id": "KH5RlHJ27eIyD3mO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "meal_proposals",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $(\"Show Customer Confirmation Form\").item.json.proposal_id }}"
+            }
+          ]
+        }
+      },
+      "id": "35945453-83a3-4206-9433-49389854a972",
+      "name": "Fetch Order Context",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        124
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "meal_requests",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $(\"Fetch Order Context\").item.json.request_id }}"
+            }
+          ]
+        }
+      },
+      "id": "df5c0754-3b49-458b-a5cf-6eeaf664cccf",
+      "name": "Fetch Request Details",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        124
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "customers",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $(\"Fetch Request Details\").item.json.customer_id }}"
+            }
+          ]
+        }
+      },
+      "id": "21ba5223-bfd8-4a40-a539-a641553b0765",
+      "name": "Fetch Customer Details",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        124
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const timestamp = Date.now();\nconst orderId = `CK-${timestamp.toString().slice(-6)}`;\nreturn [{ order_id: orderId }];"
+      },
+      "id": "459af21c-b78d-433a-bb81-5ff52d1fe91e",
+      "name": "Generate Order Number",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        124
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract order ID from the chef's reply message\n// The original message contains \"Order ID: CK-XXXXXX\"\nconst replyToMessage = $input.item.json.message.reply_to_message;\nif (replyToMessage && replyToMessage.text) {\n  const match = replyToMessage.text.match(/Order ID: (CK-\\d+)/);\n  if (match) {\n    return [{ order_id: match[1], chef_reply: $input.item.json.message.text }];\n  }\n}\n// Fallback: get the most recent pending proposal\nreturn [{ order_id: null, chef_reply: $input.item.json.message.text }];"
+      },
+      "id": "5300d1d1-6c46-43cd-a7c7-1ab354efde9b",
+      "name": "Extract Order ID from Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        316
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "meal_proposals",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "proposal_created"
+            }
+          ]
+        }
+      },
+      "id": "e53642e2-3419-442c-9704-6fe0e59312f3",
+      "name": "Fetch Pending Proposal",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        316
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "meal_requests",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $(\"Fetch Pending Proposal\").item.json.request_id }}"
+            }
+          ]
+        }
+      },
+      "id": "956ce80c-d92c-444a-8ed7-ee85a5c321b9",
+      "name": "Fetch Request for Customer",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        220
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "customers",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $(\"Fetch Request for Customer\").item.json.customer_id }}"
+            }
+          ]
+        }
+      },
+      "id": "d4ce90ef-dd99-40c4-9812-c0c13f50793e",
+      "name": "Fetch Customer for Notification",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        224
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8247736078",
+        "text": "=❌ Order Rejected\n\nThe proposal has been marked as rejected.",
+        "additionalFields": {}
+      },
+      "id": "1bb47b0e-40c4-43db-a7b8-9618120f349b",
+      "name": "Notify Chef - Rejected",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        412
+      ],
+      "webhookId": "9fcf64cd-214f-46d8-9710-d601fdca4977",
+      "credentials": {
+        "telegramApi": {
+          "id": "KH5RlHJ27eIyD3mO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cookup/order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "32b4c06a-e960-4985-8d9b-a326db510a8d",
+      "name": "Customer Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        -24
+      ],
+      "webhookId": "f3227515-1df1-4072-92e5-0c18e09ec4ee"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n{\n  ok: true,\n  status: \"proposal_created\",\n  order_id: $(\"Generate Order ID\").item.json.order_id,\n  proposal_id: $(\"Insert Meal Proposal\").item.json.id,\n  proposal_summary: JSON.parse($(\"Create Meal Proposal\").item.json.output).proposal_summary,\n  delivery_time: JSON.parse($(\"Create Meal Proposal\").item.json.output).delivery_time,\n  chef_name: JSON.parse($(\"Create Meal Proposal\").item.json.output).chef\n}\n}}",
+        "options": {}
+      },
+      "id": "12c5dc2a-61f8-4558-b526-1deb73233201",
+      "name": "Show Order Confirmation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1952,
+        -24
+      ],
+      "webhookId": "59136b2f-3ab3-4c76-a115-731024e11192"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n{\n  ok: true,\n  status: \"confirmed\",\n  order_id: $(\"Generate Order Number\").item.json.order_id,\n  proposal_id: $(\"Fetch Order Context\").item.json.id,\n  proposal_summary: $(\"Fetch Order Context\").item.json.proposal_summary,\n  delivery_time: $(\"Fetch Order Context\").item.json.delivery_time\n}\n}}",
+        "options": {}
+      },
+      "id": "e961ca7b-8d84-4161-bde9-1dc00b11f35a",
+      "name": "Send Final Confirmation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        4416,
+        128
+      ],
+      "webhookId": "8a9ced2c-2ba4-4851-9dd7-c2ed633514e9"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n{\n  ok: true,\n  status: \"cancelled\",\n  proposal_id: $(\"Show Customer Confirmation Form\").item.json.proposal_id\n}\n}}",
+        "options": {}
+      },
+      "id": "7ccb45df-ecb5-4e60-b4d4-938299b731f3",
+      "name": "Send Cancellation Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2624,
+        316
+      ],
+      "webhookId": "d9984ae5-f696-4a21-bfa3-08e67f44935d"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cookup/decision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "be88175d-c174-4d7b-8e0a-0fdfe3d35050",
+      "name": "Customer Decision Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1504,
+        220
+      ],
+      "webhookId": "4552aea4-4abc-47bb-ab3a-109f6fde9c57"
+    },
+    {
+      "parameters": {
+        "jsCode": "let output = $input.item.json.output;\n// Remove markdown code blocks\noutput = output.replace(/```json\\n?/g, \"\").replace(/```\\n?/g, \"\").trim();\nconst parsed = JSON.parse(output);\nreturn [parsed];"
+      },
+      "id": "7402eb72-77c6-45b4-ae00-f02d5e02159f",
+      "name": "Clean AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        316
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body ?? $input.item.json;\nreturn [{\n  customer_name: body.customer_name,\n  customer_phone: body.customer_phone,\n  customer_email: body.customer_email ?? \"\",\n  message: body.message,\n  delivery_address: body.delivery_address\n}];"
+      },
+      "id": "0a63ef48-0574-46bf-b6ec-8f4d8f671901",
+      "name": "Customer Order Form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        -24
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body ?? $input.item.json;\nconst decision = String(body.decision ?? body[\"Do you want to confirm this order?\"] ?? \"\").toUpperCase();\nreturn [{\n  proposal_id: body.proposal_id,\n  decision,\n  \"Do you want to confirm this order?\": decision\n}];"
+      },
+      "id": "c9127316-f8da-442b-b815-54cd34754173",
+      "name": "Show Customer Confirmation Form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "cookup/status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b18e6238-c7b3-4975-83a4-9d77df0c2ef1",
+      "name": "Proposal Status Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        620
+      ],
+      "webhookId": "b18e6238-c7b3-4975-83a4-9d77df0c2ef1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const json = $input.item.json;\nreturn [{\n  proposal_id: json.query?.proposal_id ?? json.body?.proposal_id ?? json.proposal_id\n}];"
+      },
+      "id": "222fe67d-d03d-4d7d-8324-15ac26e93c7b",
+      "name": "Normalize Status Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "meal_proposals",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $(\"Normalize Status Request\").item.json.proposal_id }}"
+            }
+          ]
+        }
+      },
+      "id": "0b277b6a-8055-4a3a-8202-7e93ee46f37f",
+      "name": "Fetch Proposal Status",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        620
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n{\n  ok: !!$(\"Fetch Proposal Status\").item.json.id,\n  proposal_id: $(\"Fetch Proposal Status\").item.json.id,\n  status: $(\"Fetch Proposal Status\").item.json.status,\n  proposal_summary: $(\"Fetch Proposal Status\").item.json.proposal_summary,\n  delivery_time: $(\"Fetch Proposal Status\").item.json.delivery_time,\n  chef_name: $(\"Fetch Proposal Status\").item.json.chef_name,\n  error: $(\"Fetch Proposal Status\").item.json.id ? undefined : \"Proposal not found\"\n}\n}}",
+        "options": {}
+      },
+      "id": "5fd74670-a10b-4c30-a56c-f48c5270ff0d",
+      "name": "Respond Proposal Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "meal_proposals",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $(\"Show Customer Confirmation Form\").item.json.proposal_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "cancelled"
+            }
+          ]
+        }
+      },
+      "id": "ded60888-ed26-4794-bbf9-0d59ac0c136e",
+      "name": "Mark Proposal Cancelled",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        316
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cMaHZmyy6VurKSi3",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Insert/Update Customer": {
+      "main": [
+        [
+          {
+            "node": "Generate Order ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Order ID": {
+      "main": [
+        [
+          {
+            "node": "Insert Meal Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Meal Request": {
+      "main": [
+        [
+          {
+            "node": "Parse Customer Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Customer Request": {
+      "main": [
+        [
+          {
+            "node": "Update Parsed Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Parse Customer Request",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Meal Proposal",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Process Chef Reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Parsed Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch Available Recipes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Available Recipes": {
+      "main": [
+        [
+          {
+            "node": "Create Meal Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Meal Proposal": {
+      "main": [
+        [
+          {
+            "node": "Insert Meal Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Meal Proposal": {
+      "main": [
+        [
+          {
+            "node": "Send Chef Approval Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Chef Approval Request": {
+      "main": [
+        [
+          {
+            "node": "Show Order Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Chef Reply": {
+      "main": [
+        [
+          {
+            "node": "Clean AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Chef Approval": {
+      "main": [
+        [
+          {
+            "node": "Update Proposal Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Proposal Status": {
+      "main": [
+        [
+          {
+            "node": "Check Chef Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Chef Decision": {
+      "main": [
+        [
+          {
+            "node": "Fetch Request for Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Chef - Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Customer Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Fetch Order Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Proposal Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Official Order": {
+      "main": [
+        [
+          {
+            "node": "Append to Ops Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Ops Sheet": {
+      "main": [
+        [
+          {
+            "node": "Email Founder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Founder": {
+      "main": [
+        [
+          {
+            "node": "Notify Chef - Order Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Chef - Order Confirmed": {
+      "main": [
+        [
+          {
+            "node": "Add Status History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chef Reply Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Order ID from Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Order Context": {
+      "main": [
+        [
+          {
+            "node": "Fetch Request Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Request Details": {
+      "main": [
+        [
+          {
+            "node": "Fetch Customer Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Customer Details": {
+      "main": [
+        [
+          {
+            "node": "Generate Order Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Order Number": {
+      "main": [
+        [
+          {
+            "node": "Create Official Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Status History": {
+      "main": [
+        [
+          {
+            "node": "Send Final Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Order ID from Reply": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pending Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pending Proposal": {
+      "main": [
+        [
+          {
+            "node": "Process Chef Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Request for Customer": {
+      "main": [
+        [
+          {
+            "node": "Fetch Customer for Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Customer for Notification": {
+      "main": [
+        []
+      ]
+    },
+    "Show Customer Confirmation Form": {
+      "main": [
+        [
+          {
+            "node": "Check Customer Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save Chef Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "Customer Order Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Order Form": {
+      "main": [
+        [
+          {
+            "node": "Insert/Update Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Decision Webhook": {
+      "main": [
+        [
+          {
+            "node": "Show Customer Confirmation Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposal Status Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Status Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Status Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch Proposal Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Proposal Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Proposal Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Proposal Cancelled": {
+      "main": [
+        [
+          {
+            "node": "Send Cancellation Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "28c816e6-7e0c-4aad-9756-1470616e512e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae82d25f58c8599f5b52539994e3803635344f6414cb066a5136b73d57c2b666"
+  },
+  "id": "UHdXIAASQzsOyXjy",
+  "tags": []
+}
