@@ -127,7 +127,7 @@ function OrderReceivedContent() {
             </div>
             <div className="summary-row">
               <strong>Status</strong>
-              <span>{status.status || "pending"}</span>
+              <span className="status-badge">{status.status || "pending chef review"}</span>
             </div>
             {status.proposal_summary ? (
               <div className="summary-row">

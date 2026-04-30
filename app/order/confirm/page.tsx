@@ -98,16 +98,16 @@ function ConfirmOrderContent() {
 
       <section className="card center-card">
         <p className="kicker">Confirm your meal</p>
-        <h2>Approve the chef-backed proposal.</h2>
+        <h2>Ready to place this order?</h2>
         <p className="muted">
-          Choose confirm to create the official order, notify the chef, append the ops sheet, and email the founder from n8n.
+          Confirm to create the official CookUp order and notify the kitchen. Cancel if the proposal is not right.
         </p>
 
         {proposal ? (
           <div className="summary">
             <div className="summary-row">
               <strong>Status</strong>
-              <span>{proposal.status}</span>
+              <span className="status-badge">{proposal.status}</span>
             </div>
             <div className="summary-row">
               <strong>Meal</strong>

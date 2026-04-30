@@ -64,29 +64,38 @@ export default function Home() {
 
       <section className="hero">
         <div className="intro">
-          <p className="kicker">Private kitchen intake</p>
-          <h1>Tell us what dinner needs to do.</h1>
+          <p className="kicker">CookUp concierge</p>
+          <h1>Meals planned around your table.</h1>
           <p className="lede">
-            Share the people count, dietary needs, timing, and delivery address.
-            CookUp will generate a proposal and ask the chef to approve it.
+            Share the people count, cravings, dietary needs, and timing. CookUp turns it into a chef-reviewed meal proposal.
           </p>
+          <div className="trust-strip" aria-label="CookUp service highlights">
+            <span>Chef reviewed</span>
+            <span>Diet aware</span>
+            <span>Delivery planned</span>
+          </div>
           <div className="steps">
             <div className="step">
               <span>1</span>
-              Submit your meal request.
+              Tell us what you need.
             </div>
             <div className="step">
               <span>2</span>
-              Chef reviews the AI proposal.
+              We prepare a proposal.
             </div>
             <div className="step">
               <span>3</span>
-              Confirm or cancel from your own CookUp page.
+              Confirm after chef approval.
             </div>
           </div>
         </div>
 
         <form className="form-card" onSubmit={submitOrder}>
+          <div className="form-header">
+            <p className="kicker">Start an order</p>
+            <h2>Meal request</h2>
+            <p>Be specific about portions, restrictions, spice level, and delivery time. The chef sees this context.</p>
+          </div>
           <div className="grid">
             <div className="field">
               <label htmlFor="customer_name">Your Name</label>
@@ -129,6 +138,7 @@ export default function Home() {
               {submitting ? "Creating proposal..." : "Submit Order"}
             </button>
           </div>
+          <div className="notice">You will see the proposed meal details right after submission.</div>
 
           {error ? <div className="error">{error}</div> : null}
         </form>
