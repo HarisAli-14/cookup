@@ -65,9 +65,9 @@ export default function Home() {
       <section className="hero">
         <div className="intro">
           <p className="kicker">CookUp concierge</p>
-          <h1>Meals planned around your table.</h1>
+          <h1>Chef-ready meals, faster.</h1>
           <p className="lede">
-            Share the people count, cravings, dietary needs, and timing. CookUp turns it into a chef-reviewed meal proposal.
+            Tell us the headcount, cravings, restrictions, and timing. CookUp turns it into a chef-reviewed proposal.
           </p>
           <div className="trust-strip" aria-label="CookUp service highlights">
             <span>Chef reviewed</span>
@@ -77,15 +77,15 @@ export default function Home() {
           <div className="steps">
             <div className="step">
               <span>1</span>
-              Tell us what you need.
+              Share your request.
             </div>
             <div className="step">
               <span>2</span>
-              We prepare a proposal.
+              Get a meal proposal.
             </div>
             <div className="step">
               <span>3</span>
-              Confirm after chef approval.
+              Confirm after approval.
             </div>
           </div>
         </div>
@@ -94,22 +94,22 @@ export default function Home() {
           <div className="form-header">
             <p className="kicker">Start an order</p>
             <h2>Meal request</h2>
-            <p>Be specific about portions, restrictions, spice level, and delivery time. The chef sees this context.</p>
+            <p>Add portions, restrictions, spice level, and delivery timing.</p>
           </div>
           <div className="grid">
             <div className="field">
               <label htmlFor="customer_name">Your Name</label>
-              <input id="customer_name" name="customer_name" required placeholder="Enter your full name" />
+              <input id="customer_name" name="customer_name" required placeholder="Haris Ali" />
             </div>
 
             <div className="field">
               <label htmlFor="customer_phone">Phone Number</label>
-              <input id="customer_phone" name="customer_phone" required placeholder="+923001234567" />
+              <input id="customer_phone" name="customer_phone" required placeholder="+92 300 1234567" />
             </div>
 
             <div className="field full">
               <label htmlFor="customer_email">Email Address</label>
-              <input id="customer_email" name="customer_email" type="email" placeholder="you@example.com" />
+              <input id="customer_email" name="customer_email" type="email" placeholder="you@email.com" />
             </div>
 
             <div className="field full">
@@ -118,7 +118,7 @@ export default function Home() {
                 id="message"
                 name="message"
                 required
-                placeholder="Example: I need dinner for 4 people, no beef, one person is gluten-free."
+                placeholder="Dinner for 4, no beef, one gluten-free meal."
               />
             </div>
 
@@ -128,7 +128,7 @@ export default function Home() {
                 id="delivery_address"
                 name="delivery_address"
                 required
-                placeholder="Enter your full delivery address."
+                placeholder="House, street, city, delivery notes."
               />
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function Home() {
               {submitting ? "Creating proposal..." : "Submit Order"}
             </button>
           </div>
-          <div className="notice">You will see the proposed meal details right after submission.</div>
+          <div className="notice">You will see the proposal immediately after submission.</div>
 
           {error ? <div className="error">{error}</div> : null}
         </form>
